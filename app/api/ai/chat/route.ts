@@ -66,7 +66,14 @@ CRITICAL RESPONSE RULES:
     }
 
     const data = await response.json();
-    const replyContent = data.choices?.[0]?.message?.content || 'Direct budget diagnosis generated.';
+    const rawContent: string = data.choices?.[0]?.message?.content || '';
+
+    // Strip any internal chain-of-thought / "thinking" text the model may leak
+    // before the first structured section header (### 1. ...)
+    const firstSectionIndex = rawContent.search(/###\s*\d+\./);
+    const replyContent = firstSectionIndex !== -1
+      ? rawContent.slice(firstSectionIndex).trim()
+      : rawContent.trim() || 'Direct budget diagnosis generated.';
 
     return NextResponse.json({ reply: replyContent });
   } catch (error: any) {
